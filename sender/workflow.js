@@ -1,20 +1,27 @@
  'use strict';
 (()=>{
  const $=id=>document.getElementById(id), KEY='qrWorkflowBackupsV1';
+ const RETENTION_MS=7*24*60*60*1000;
  const api=()=>window.qrWorkflowAPI;
- const read=()=>{try{const x=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(x)?x:[];}catch{return [];}};
+ // Every read filters expired items. Legacy entries without timestamps use their id timestamp.
+ const read=()=>{try{
+  const raw=JSON.parse(localStorage.getItem(KEY)||'[]');if(!Array.isArray(raw))return [];
+  const now=Date.now();const valid=raw.filter(item=>{
+   if(!item||!Array.isArray(item.rows))return false;
+   const created=Number(item.createdAt)||Number(String(item.id||'').split('-')[0]);
+   return Number.isFinite(created)&&created>0&&created<=now&&now-created<RETENTION_MS;
+  });
+  if(valid.length!==raw.length)localStorage.setItem(KEY,JSON.stringify(valid));
+  return valid;
+ }catch{return [];}};
  const write=x=>localStorage.setItem(KEY,JSON.stringify(x));
  const csv=rows=>'\uFEFF識別番号,QRコードデータ,読取日時\r\n'+rows.map(r=>[r.id,r.value,r.time].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');
  const clean=v=>String(v??'').replace(/[\t\r\n]+/g,' ').replace(/^[=+@-]/,"'$&");
  const tsv=rows=>rows.map(r=>[r.id,r.value,r.time].map(clean).join('\t')).join('\r\n');
  const message=s=>{const el=$('notice');if(el)el.textContent=s;};
- function saveCopy(kind){const rows=api()?.getRows?.()||[];if(!rows.length)return null;const id=Date.now()+'-'+Math.random().toString(36).slice(2,8);const item={id,kind,at:new Date().toLocaleString('ja-JP'),rows};const items=read();items.unshift(item);write(items.slice(0,100));refresh();return item;}
- // CSV is downloaded before handing data to another app. Local backup supports resend until explicit exit.
- function ensureCsv(kind){const item=saveCopy(kind);if(!item)return null;const f=new File([csv(item.rows)],'QR履歴_'+item.id+'.csv',{type:'text/csv;charset=utf-8'});api().save(f);return item;}
- window.qrWorkflowBackup=async(kind)=>{
-  if(kind==='csv')return saveCopy(kind);
-  return ensureCsv(kind);
- };
+ function saveCopy(kind){const rows=api()?.getRows?.()||[];if(!rows.length)return null;const id=Date.now()+'-'+Math.random().toString(36).slice(2,8);const item={id,kind,at:new Date().toLocaleString('ja-JP'),createdAt:Date.now(),rows};const items=read();items.unshift(item);write(items.slice(0,100));refresh();return item;}
+ // CSV content remains inside localStorage only; no CSV download is triggered.
+ window.qrWorkflowBackup=async(kind)=>saveCopy(kind);
  window.qrWorkflowClear=()=>{api()?.clear?.();message('送信操作に渡したため画面の履歴を削除しました。相手への到達・貼り付け完了は未確認です。必要なら再送信してください。');};
  const showSettings=on=>{ $('mainView').hidden=on;$('settingsView').hidden=!on;$('openSettingsBtn').hidden=on;window.scrollTo(0,0); };
  $('openSettingsBtn').onclick=()=>showSettings(true);$('backSettingsBtn').onclick=()=>showSettings(false);
@@ -62,6 +69,9 @@
  };
  // Web pages cannot delete files in the device Downloads folder, nor guarantee cleanup on OS app termination.
  window.qrWorkflowExit=async()=>{localStorage.removeItem(KEY);refresh();};
- window.addEventListener('pagehide',()=>{ /* No destructive cleanup: accidental backgrounding must not lose recovery data. */ });
+ window.addEventListener('pagehide',()=>{ /* Keep unexpired recovery data on backgrounding. */ });
+ // Expiry is enforced on startup, every hour while running, and before resend.
+ setInterval(refresh,60*60*1000);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
  refresh();
 })();
