@@ -14,7 +14,7 @@
 <body>
 <main class="app">
   <header class="top-header"><h1>QRコード読み取り</h1><button id="openSettingsBtn" type="button">設定 <span aria-hidden="true">⚙</span></button></header>
-<div id="mainView">
+<div id="mainView"><section class="panel" id="inventoryPanel"><h2>読取モード</h2><label>作業内容<select id="inventoryMode"><option value="inventory">棚卸モード（存在＋現在位置）</option><option value="count">員数チェック（存在のみ）</option><option value="normal">通常読取（従来方式）</option></select></label><p>現在位置：<strong id="inventoryLocation">未設定</strong></p><p id="inventoryStatus" class="hint" aria-live="polite"></p><button id="inventoryResetBtn" type="button">新しい棚卸を開始（重複チェックをリセット）</button><p class="hint">棚位置QR：LOC,部屋,棚,段 ／ 品物QR：種別,管理箇所,勘定,設備番号,個口分子,個口分母,常置部屋,常置棚,常置段。Excelでコードを変換します。</p></section>
 
 
 
@@ -35,7 +35,7 @@
 
   <section class="panel">
     <div class="section-head"><h2>読み取り履歴</h2><button id="clearBtn" class="danger" disabled>全削除</button></div>
-    <div class="table-wrap"><table><thead><tr><th>識別番号</th><th>QRコードデータ</th><th>読取日時</th><th></th></tr></thead><tbody id="historyBody"><tr class="empty"><td colspan="4">まだデータがありません</td></tr></tbody></table></div>
+    <div class="table-wrap"><table><thead><tr><th>識別番号</th><th>QRコードデータ</th><th>読取日時</th><th>現在位置</th><th></th></tr></thead><tbody id="historyBody"><tr class="empty"><td colspan="5">まだデータがありません</td></tr></tbody></table></div>
     <div class="actions export"><button id="csvBtn" disabled>CSVを内部保存</button><button id="smsSendBtn" type="button" disabled>ショートメールでデータ送信</button></div><p id="csvLocation" class="file-location" aria-live="polite"></p>
   </section>
 
@@ -81,6 +81,6 @@
       <div class="password-options"><label>パスワード最低文字数（4～128）<input id="passwordMinLength" type="number" min="4" max="128" step="1" value="10"></label><label class="checkbox-label"><input id="strongPasswordRule" type="checkbox" checked>英小文字・英大文字・数字をすべて必須にする</label></div>
       <label>暗号化パスワード<input id="encPassword" type="password" autocomplete="new-password" placeholder="指定した最低文字数以上"></label>
       <label>パスワード確認<input id="encPassword2" type="password" autocomplete="new-password" placeholder="もう一度入力"></label>
-    </div><label>受信側メールアドレス<input id="shareEmail" type="email" autocomplete="email" placeholder="example@example.com"></label></section><section class="panel"><h2>共有Excel設定</h2><label>共有Excelのリンク<input id="excelShareUrl" type="url" inputmode="url" placeholder="https://...sharepoint.com/... または https://1drv.ms/..." autocomplete="off"></label></section><section class="panel"><h2>ショートメール設定</h2><label>送信相手の電話番号<input id="smsNumber" type="tel" inputmode="tel" placeholder="09012345678"></label></section></section></main>
+    </div><label>受信側メールアドレス<input id="shareEmail" type="email" autocomplete="email" placeholder="example@example.com"></label></section><section class="panel"><h2>共有Excel設定</h2><label>共通の共有Excelリンク（GitHub Pagesから自動取得）<input id="excelShareUrl" type="url" readonly placeholder="共通リンクを取得中"></label><p id="excelSyncStatus" class="hint" role="status" aria-live="polite">共通リンクを取得中...</p><button id="excelRefreshBtn" type="button">共通リンクを再取得</button></section><section class="panel"><h2>ショートメール設定</h2><label>送信相手の電話番号<input id="smsNumber" type="tel" inputmode="tel" placeholder="09012345678"></label></section></section></main>
 </body>
 </html>
