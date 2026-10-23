@@ -15,9 +15,9 @@
   return valid;
  }catch{return [];}};
  const write=x=>localStorage.setItem(KEY,JSON.stringify(x));
- const csv=rows=>'\uFEFF識別番号,QRコードデータ,読取日時\r\n'+rows.map(r=>[r.id,r.value,r.time].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');
+ const csv=rows=>'\uFEFF識別番号,QRコードデータ,読取日時,現在位置\r\n'+rows.map(r=>[r.workId||'NORMAL',r.id,r.value,r.time].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');
  const clean=v=>String(v??'').replace(/[\t\r\n]+/g,' ').replace(/^[=+@-]/,"'$&");
- const tsv=rows=>rows.map(r=>[r.id,r.value,r.time].map(clean).join('\t')).join('\r\n');
+ const tsv=rows=>rows.map(r=>[r.workId||'NORMAL',r.id,r.value,r.time].map(clean).join('\t')).join('\r\n');
  const message=s=>{const el=$('notice');if(el)el.textContent=s;};
  function saveCopy(kind){const rows=api()?.getRows?.()||[];if(!rows.length)return null;const id=Date.now()+'-'+Math.random().toString(36).slice(2,8);const item={id,kind,at:new Date().toLocaleString('ja-JP'),createdAt:Date.now(),rows};const items=read();items.unshift(item);write(items.slice(0,100));refresh();return item;}
  // CSV content remains inside localStorage only; no CSV download is triggered.
@@ -68,7 +68,7 @@
   $('resendStatus').textContent=info;
  };
  // Web pages cannot delete files in the device Downloads folder, nor guarantee cleanup on OS app termination.
- window.qrWorkflowExit=async()=>{localStorage.removeItem(KEY);refresh();};
+ window.qrWorkflowExit=async()=>{refresh();};
  window.addEventListener('pagehide',()=>{ /* Keep unexpired recovery data on backgrounding. */ });
  // Expiry is enforced on startup, every hour while running, and before resend.
  setInterval(refresh,60*60*1000);

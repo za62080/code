@@ -41,13 +41,13 @@
  function update(){copy.disabled=rows().length===0;}
  copy.addEventListener('click',async()=>{
   const h=rows();if(!h.length){status.textContent='読み取り履歴がありません。';return;}
-  const value=h.map(x=>[x.id,x.value,x.time,x.currentLocation||''].map(sanitize).join('\t')).join('\r\n');
+  const value=h.map(x=>[x.workId,x.id,x.value,x.time].map(sanitize).join('\t')).join('\r\n');
   await window.qrWorkflowBackup?.('excel');
-  try{await navigator.clipboard.writeText(value);window.qrWorkflowClear?.();status.textContent=`${h.length}件をコピーしました。共有Excelを開き、空白行の先頭セルに貼り付けてください。`;return;}
+  try{await navigator.clipboard.writeText(value);window.qrExcelExport?.clearAfterCopy?.();status.textContent=`${h.length}件をコピーしました。共有Excelを開き、空白行の先頭セルに貼り付けてください。`;return;}
   catch(e){
    const ta=document.createElement('textarea');ta.value=value;ta.style.cssText='position:fixed;top:0;left:0;width:1px;height:1px;opacity:0';document.body.append(ta);ta.focus();ta.select();
    let ok=false;try{ok=document.execCommand('copy');}catch{}ta.remove();
-   if(ok)window.qrWorkflowClear?.();
+   if(ok)window.qrExcelExport?.clearAfterCopy?.();
    status.textContent=ok?`${h.length}件をコピーしました。共有Excelに貼り付けてください。`:'コピーできませんでした。ブラウザのクリップボード権限を確認してください。';
   }
  });

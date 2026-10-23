@@ -14,7 +14,7 @@
 <body>
 <main class="app">
   <header class="top-header"><h1>QRコード読み取り</h1><button id="openSettingsBtn" type="button">設定 <span aria-hidden="true">⚙</span></button></header>
-<div id="mainView"><section class="panel" id="inventoryPanel"><h2>読取モード</h2><label>作業内容<select id="inventoryMode"><option value="inventory">棚卸モード（存在＋現在位置）</option><option value="count">員数チェック（存在のみ）</option><option value="normal">通常読取（従来方式）</option></select></label><p>現在位置：<strong id="inventoryLocation">未設定</strong></p><p id="inventoryStatus" class="hint" aria-live="polite"></p><button id="inventoryResetBtn" type="button">新しい棚卸を開始（重複チェックをリセット）</button><p class="hint">棚位置QR：LOC,部屋,棚,段 ／ 品物QR：種別,管理箇所,勘定,設備番号,個口分子,個口分母,常置部屋,常置棚,常置段。Excelでコードを変換します。</p></section>
+<div id="mainView"><section class="panel" id="inventoryPanel"><h2>読取モード</h2><label>作業内容<select id="inventoryMode"><option value="inventory">棚卸モード（存在＋現在位置）</option><option value="count">員数チェック（存在のみ）</option><option value="normal">通常読取（従来方式）</option></select></label><p>現在位置：<strong id="inventoryLocation">未設定</strong></p><p id="inventoryStatus" class="hint" aria-live="polite"></p><button id="inventoryResetBtn" type="button">新しい棚卸を開始（重複チェックをリセット）</button><p class="hint">棚位置QR：ZAA999AA＋部屋・棚・段（計11文字）／ 品物QR：11文字（4～6文字目は数字）。Excelでコードを変換します。</p></section>
 
 
 
