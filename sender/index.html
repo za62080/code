@@ -75,9 +75,9 @@
 </div>
 <section id="settingsView" hidden><div class="section-head"><h2>設定</h2><button id="backSettingsBtn" type="button">読み取り画面へ戻る</button></div>  <section class="panel compact-settings">
     <h2>読み取り設定</h2>
-    <label class="checkline"><input id="continuousRegistration" type="checkbox"> 連続登録可</label>
+    <label class="checkline" hidden><input id="continuousRegistration" type="checkbox"> 連続登録可</label>
     <label class="checkline"><input id="allowDuplicates" type="checkbox"> 同一データ登録可</label>
-  </section>  <section class="panel pause-panel"><h2>読取更新停止時間</h2><label>停止時間（秒）<input id="pauseSeconds" type="number" min="0.3" max="60" step="0.1" value="10" inputmode="decimal"></label><select id="userProfile" hidden><option value="guest">ゲスト</option></select></section><section class="panel"><h2>暗号化・メール設定</h2><div class="form-grid">
+  </section>  <section class="panel pause-panel" hidden><h2>読取更新停止時間</h2><label>停止時間（秒）<input id="pauseSeconds" type="number" min="0.3" max="60" step="0.1" value="10" inputmode="decimal"></label><select id="userProfile" hidden><option value="guest">ゲスト</option></select></section><section class="panel"><h2>暗号化・メール設定</h2><div class="form-grid">
       <div class="password-options"><label>パスワード最低文字数（4～128）<input id="passwordMinLength" type="number" min="4" max="128" step="1" value="10"></label><label class="checkbox-label"><input id="strongPasswordRule" type="checkbox" checked>英小文字・英大文字・数字をすべて必須にする</label></div>
       <label>暗号化パスワード<input id="encPassword" type="password" autocomplete="new-password" placeholder="指定した最低文字数以上"></label>
       <label>パスワード確認<input id="encPassword2" type="password" autocomplete="new-password" placeholder="もう一度入力"></label>

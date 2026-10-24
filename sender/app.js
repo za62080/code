@@ -59,22 +59,38 @@ function loadSettings(){try{const s=JSON.parse(localStorage.getItem(SETTINGS_KEY
 function saveSettings(){localStorage.setItem(SETTINGS_KEY,JSON.stringify({continuousRegistration:ui.continuousRegistration.checked,allowDuplicates:ui.allowDuplicates.checked,autoClear:ui.autoClear.checked}));}
 function updateCameraButton(){ui.camera.textContent=scanning?'カメラ停止':'カメラ起動';ui.camera.classList.toggle('camera-on',scanning);ui.camera.classList.toggle('camera-off',!scanning);}
 async function startCamera(){if(scanning)return;if(typeof Html5Qrcode==='undefined'){message('QRライブラリを読み込めませんでした。');return;}
- try{scanner=scanner||new Html5Qrcode('reader');await scanner.start({facingMode:'environment'},{fps:10,qrbox:(w,h)=>{const side=Math.max(80,Math.floor(Math.min(w,h)*0.90));return {width:side,height:side};}},onScan,()=>{});scanning=true;updateCameraButton();}
+ try{scanner=scanner||new Html5Qrcode('reader');await scanner.start({facingMode:'environment'},{fps:10,qrbox:(w,h)=>{const side=Math.max(80,Math.floor(Math.min(w,h)*0.90));return {width:side,height:side};}},onScan,()=>{});scanning=true;updateCameraButton();ui.accept.disabled=false;ui.releaseFreeze.disabled=false;}
  catch(e){message('カメラを起動できません。権限・HTTPSを確認してください。');}}
-async function stopCamera(){cancelPending();if(scanner&&scanning){await scanner.stop().catch(()=>{});scanning=false;}updateCameraButton();}
-function cancelPending(){if(pendingTimer)clearTimeout(pendingTimer);pendingTimer=null;pending=null;ui.accept.disabled=true;ui.releaseFreeze.disabled=true;ui.latest.value='';}
-function onScan(text){
- if(pending)return;
- if(invMode.value==='normal'&&!(ui.allowDuplicates.checked&&ui.continuousRegistration.checked)&&historyItems.some(x=>x.value===text))return;
- const now=Date.now();if(text===lastDetected&&now-lastDetectedAt<1900)return;
- lastDetected=text;lastDetectedAt=now;
- if(ui.continuousRegistration.checked){commit({value:text,time:new Date(now)});return;}
- pending={value:text,time:new Date(now)};
- ui.latest.value=text;ui.accept.disabled=ui.continuousRegistration.checked;ui.releaseFreeze.disabled=ui.continuousRegistration.checked; 
- // 停止中はスキャン解析を受け付けず、表示中の映像も静止させる。
- const video=document.querySelector('#reader video');if(video)video.pause();
- pendingTimer=setTimeout(()=>{cancelPending();if(scanning){const v=document.querySelector('#reader video');if(v)v.play().catch(()=>{});}},Math.round(pauseDuration()*1000));
+async function stopCamera(){cancelPending();if(scanner&&scanning){await scanner.stop().catch(()=>{});scanning=false;}updateCameraButton();ui.accept.disabled=true;ui.releaseFreeze.disabled=true;}
+// B mode: decode continuously, register only on an explicit button press.
+const DETECTION_TTL_MS=500, RESULT_HOLD_MS=1000;
+let latestCandidate=null, resultHoldUntil=0, resultHoldTimer=null, lastTapAt=0;
+function cancelPending(){
+ latestCandidate=null;lastDetected='';lastDetectedAt=0;
+ if(resultHoldTimer)clearTimeout(resultHoldTimer);
+ resultHoldTimer=null;resultHoldUntil=0;
+ ui.latest.value='';ui.accept.disabled=!scanning;
 }
+function onScan(text){
+ if(!scanning||!text)return;
+ const now=Date.now();
+ latestCandidate={value:text,time:now};lastDetected=text;lastDetectedAt=now;
+ if(now>=resultHoldUntil)ui.latest.value=text;
+}
+function showScanResult(text){
+ resultHoldUntil=Date.now()+RESULT_HOLD_MS;
+ ui.latest.value=text;
+ if(resultHoldTimer)clearTimeout(resultHoldTimer);
+ resultHoldTimer=setTimeout(()=>{
+  resultHoldTimer=null;
+  if(Date.now()>=resultHoldUntil)ui.latest.value=(scanning&&latestCandidate&&Date.now()-latestCandidate.time<=DETECTION_TTL_MS)?latestCandidate.value:'';
+ },RESULT_HOLD_MS);
+}
+// A QR candidate expires even if the camera decoder does not emit a failure callback.
+setInterval(()=>{
+ if(!scanning||Date.now()<resultHoldUntil)return;
+ if(!latestCandidate||Date.now()-latestCandidate.time>DETECTION_TTL_MS){latestCandidate=null;ui.latest.value='';}
+},120);
 function commit(item){
  let extra={};
  if(invMode.value!=='normal'){
@@ -92,13 +108,27 @@ function commit(item){
   extra={inventoryKey:parsed.key,inventoryMode:invMode.value};
   if(!workAdd(item.value,item.time,extra))return;invSeen.keys.push(parsed.key);
  }else{
-  if(!(ui.allowDuplicates.checked&&ui.continuousRegistration.checked)&&historyItems.some(x=>x.value===item.value)){message('登録済みのQRです。');return;}
+  if(!ui.allowDuplicates.checked&&historyItems.some(x=>x.value===item.value)){message('登録済みのQRです。');return;}
   const id=historyItems.length?Math.max(...historyItems.map(x=>x.id))+1:1;historyItems.push({id,...item});render();
  }
  lastAcceptedAt=Date.now();invUpdate();message(`保存しました：${historyItems.length}行`);if(navigator.vibrate)navigator.vibrate(80);
 }
-function releaseFreeze(){if(!pending)return;cancelPending();if(scanning){const v=document.querySelector('#reader video');if(v)v.play().catch(()=>{});}message('保存せずに読み取りを再開しました。');}
-function resolvePending(){if(!pending)return;const item=pending;cancelPending();commit(item);if(scanning){const v=document.querySelector('#reader video');if(v)v.play().catch(()=>{});}}
+function releaseFreeze(){
+ // Cancel the unregistered candidate, but keep the live camera running.
+ latestCandidate=null;lastDetected='';lastDetectedAt=0;
+ ui.latest.value='';message('検出表示を取り消しました。');
+}
+function resolvePending(){
+ const now=Date.now();
+ if(!scanning){message('カメラを起動してください。');return;}
+ if(now-lastTapAt<350)return;
+ lastTapAt=now;
+ const candidate=latestCandidate;
+ if(!candidate||now-candidate.time>DETECTION_TTL_MS){message('QRコードが読み込めません');return;}
+ const value=candidate.value;
+ commit({value,time:new Date(now)});
+ showScanResult(value);
+}
 function formatDate(d){return new Intl.DateTimeFormat('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(d);}
 function render(){const has=historyItems.length>0;[ui.clear,ui.csv,ui.encryptShare,ui.encryptSave].forEach(b=>b.disabled=!has);if(!has){ui.body.innerHTML='<tr class="empty"><td colspan="5">まだデータがありません</td></tr>';return;}ui.body.replaceChildren(...historyItems.map((x,i)=>{const tr=document.createElement('tr');[x.id,x.value,formatDate(x.time),x.currentLocation||''].forEach((v,j)=>{const td=document.createElement('td');td.textContent=v;if(j===1)td.className='data';tr.appendChild(td);});const td=document.createElement('td'),b=document.createElement('button');b.textContent='削除';b.className='delete-row';b.onclick=()=>{if(work){message('作業中の行削除はできません。異常行はExcelで確認してください。');return;}historyItems.splice(i,1);render();};td.appendChild(b);tr.appendChild(td);return tr;}));}
 function csvCell(v){return '"'+String(v).replace(/"/g,'""')+'"';}
@@ -141,7 +171,7 @@ $('exitAppBtn').onclick=async()=>{
  // Closing the app must not delete an unfinished work session.
  document.querySelector('main').innerHTML='<section class="panel" style="text-align:center"><h1>アプリを終了しました</h1><p>カメラを停止しました。このタブを閉じてください。</p><button type="button" onclick="location.reload()">再起動</button></section>';
  window.close();
-};ui.csv.onclick=downloadCsv;ui.encryptSave.onclick=encryptAndSave;ui.encryptShare.onclick=encryptAndShare;ui.accept.onclick=resolvePending;ui.releaseFreeze.onclick=releaseFreeze;ui.allowDuplicates.onchange=()=>{saveSettings();if(pending)releaseFreeze();};ui.continuousRegistration.onchange=()=>{saveSettings();if(pending){releaseFreeze();}ui.accept.disabled=true;ui.releaseFreeze.disabled=true;};ui.autoClear.onchange=saveSettings;ui.clear.onclick=()=>{if(work&&work.status==='active'){message('未完了の作業履歴は削除できません。');return;}if(confirm('読み取り履歴をすべて削除しますか？')){historyItems=[];work=null;localStorage.removeItem(INV_KEY);cancelPending();render();message('履歴を削除しました。');}};
+};ui.csv.onclick=downloadCsv;ui.encryptSave.onclick=encryptAndSave;ui.encryptShare.onclick=encryptAndShare;ui.accept.onclick=resolvePending;ui.releaseFreeze.onclick=releaseFreeze;ui.allowDuplicates.onchange=saveSettings;ui.continuousRegistration.onchange=saveSettings;ui.autoClear.onchange=saveSettings;ui.clear.onclick=()=>{if(work&&work.status==='active'){message('未完了の作業履歴は削除できません。');return;}if(confirm('読み取り履歴をすべて削除しますか？')){historyItems=[];work=null;localStorage.removeItem(INV_KEY);cancelPending();render();message('履歴を削除しました。');}};
 const r=$('receiverUrl');if(r)r.textContent=receiverUrl();loadSettings();readProfiles();checkSupport();checkPermission();render();invUpdate();updateCameraButton();if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('../sw.js').catch(()=>{}));
 
 // v11: password options and optional camera controls
