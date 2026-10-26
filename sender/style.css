@@ -140,3 +140,11 @@ code{font-size:.9em}
 
 /* v12 workflow settings page */
 .top-header{display:flex;align-items:center;justify-content:space-between;gap:12px}.top-header h1{margin:0}#settingsView[hidden],#mainView[hidden],#resendPanel[hidden]{display:none!important}#settingsView{padding-top:12px}#settingsView label{display:block;margin:12px 0;font-weight:600}#settingsView input[type="checkbox"]{width:20px;height:20px;min-height:20px}#resendPanel{margin-top:14px}#resendPanel fieldset{border:1px solid #ddd;border-radius:8px;margin:12px 0}#resendPanel fieldset label{display:block;margin:8px}#resendPanel input[type="radio"]{width:auto;min-height:auto}#backupSelect{width:100%;min-height:44px}#resendPanel button{width:100%}
+
+/* Import errors stay visible in the result field even when scrolled down. */
+#latestResult.qr-result-error{color:#b91c1c!important;font-weight:900!important;font-size:1.18rem!important;border:3px solid #dc2626!important;background:#fff1f2!important;line-height:1.5;}
+
+/* B-mode: a single full-height import button beside the camera. */
+.camera-side-actions{gap:0!important}
+.camera-side-actions #acceptBtn{height:112px!important;min-height:112px!important;max-height:112px!important;flex:0 0 112px!important}
+@media(max-width:420px){.camera-side-actions #acceptBtn{height:104px!important;min-height:104px!important;max-height:104px!important;flex-basis:104px!important}}
