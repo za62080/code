@@ -141,6 +141,30 @@ function resolvePending(){
 function formatDate(d){return new Intl.DateTimeFormat('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(d);}
 function render(){const has=historyItems.length>0;[ui.clear,ui.csv,ui.encryptShare,ui.encryptSave].forEach(b=>b.disabled=!has);if(!has){ui.body.innerHTML='<tr class="empty"><td colspan="5">まだデータがありません</td></tr>';return;}ui.body.replaceChildren(...historyItems.map((x,i)=>{const tr=document.createElement('tr');[x.id,x.value,formatDate(x.time),x.currentLocation||''].forEach((v,j)=>{const td=document.createElement('td');td.textContent=v;if(j===1)td.className='data';tr.appendChild(td);});const td=document.createElement('td'),b=document.createElement('button');b.textContent='削除';b.className='delete-row';b.onclick=()=>{if(work){message('作業中の行削除はできません。異常行はExcelで確認してください。');return;}historyItems.splice(i,1);render();};td.appendChild(b);tr.appendChild(td);return tr;}));}
 function csvCell(v){return '"'+String(v).replace(/"/g,'""')+'"';}
+
+// USB transfer export: exactly four columns in the same order as Excel copy.
+// Keep QR history and PWA internal backups unchanged.
+function usbCsvContent(){
+ const rows=window.qrExcelExport?.getRows?.()||[];
+ return '\uFEFF'+rows.map(x=>[x.workId,x.id,x.value,x.time].map(csvCell).join(',')).join('\r\n')+'\r\n';
+}
+function usbCsvFileName(){
+ const d=new Date(),pad=n=>String(n).padStart(2,'0');
+ return `QRDATA_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.csv`;
+}
+function exportUsbCsv(){
+ const status=$('usbCsvStatus');
+ try{
+  const rows=window.qrExcelExport?.getRows?.()||[];
+  if(!rows.length)throw new Error('出力するQR履歴がありません。');
+  const name=usbCsvFileName();
+  const file=new File([usbCsvContent()],name,{type:'text/csv;charset=utf-8'});
+  // Initiate the download directly in the click handler (before any await).
+  saveBlobFile(file);
+  if(status)status.textContent=`「${name}」の保存を開始しました。スマホのダウンロード一覧・Downloadフォルダを確認してください。履歴は削除していません。`;
+ }catch(e){if(status)status.textContent='CSV保存できませんでした：'+(e.message||e);}
+}
+
 function csvContent(){return '\uFEFF識別番号,QRコードデータ,読取日時,現在位置\r\n'+historyItems.map(x=>[x.id,x.value,formatDate(x.time),x.currentLocation||''].map(csvCell).join(',')).join('\r\n');}
 async function downloadCsv(){try{const item=await window.qrWorkflowBackup?.('csv');if(!item)throw new Error('保存する読み取り履歴がありません。');const el=$('csvLocation');if(el)el.textContent='CSVデータをPWA内部に保存しました（保存期限：7日間）。';message('CSVデータをPWA内部に保存しました。端末へのファイルダウンロードは行いません。');}catch(e){message('内部CSV保存に失敗しました：'+(e.message||e));}}
 const te=new TextEncoder();function b64(bytes){let s='';bytes.forEach(b=>s+=String.fromCharCode(b));return btoa(s);}function receiverUrl(){return new URL('../receiver/',location.href).href;}
@@ -180,7 +204,7 @@ $('exitAppBtn').onclick=async()=>{
  // Closing the app must not delete an unfinished work session.
  document.querySelector('main').innerHTML='<section class="panel" style="text-align:center"><h1>アプリを終了しました</h1><p>カメラを停止しました。このタブを閉じてください。</p><button type="button" onclick="location.reload()">再起動</button></section>';
  window.close();
-};ui.csv.onclick=downloadCsv;ui.encryptSave.onclick=encryptAndSave;ui.encryptShare.onclick=encryptAndShare;ui.accept.onclick=resolvePending;ui.allowDuplicates.onchange=saveSettings;ui.continuousRegistration.onchange=saveSettings;ui.autoClear.onchange=saveSettings;ui.clear.onclick=()=>{if(work&&work.status==='active'){message('未完了の作業履歴は削除できません。');return;}if(confirm('読み取り履歴をすべて削除しますか？')){historyItems=[];work=null;localStorage.removeItem(INV_KEY);cancelPending();render();message('履歴を削除しました。');}};
+};$('usbCsvBtn').onclick=exportUsbCsv;ui.csv.onclick=downloadCsv;ui.encryptSave.onclick=encryptAndSave;ui.encryptShare.onclick=encryptAndShare;ui.accept.onclick=resolvePending;ui.allowDuplicates.onchange=saveSettings;ui.continuousRegistration.onchange=saveSettings;ui.autoClear.onchange=saveSettings;ui.clear.onclick=()=>{if(work&&work.status==='active'){message('未完了の作業履歴は削除できません。');return;}if(confirm('読み取り履歴をすべて削除しますか？')){historyItems=[];work=null;localStorage.removeItem(INV_KEY);cancelPending();render();message('履歴を削除しました。');}};
 const r=$('receiverUrl');if(r)r.textContent=receiverUrl();loadSettings();readProfiles();checkSupport();checkPermission();render();invUpdate();updateCameraButton();if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('../sw.js').catch(()=>{}));
 
 // v11: password options and optional camera controls
